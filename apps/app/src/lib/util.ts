@@ -666,3 +666,28 @@ type RateLimitIgnoreFcn = {
 	/** Clear any cheduled function executions */
 	clear: () => void
 }
+export function objPathSet<T>(obj: any, path: string | string[], value: T): T {
+	const parts: string[] = typeof path === 'string' ? path.split('.') : path
+	const current = parts[0]
+	if (parts.length === 1) {
+		obj[current] = value
+	} else {
+		const rest = parts.slice(1)
+		if (!obj[current]) obj[current] = {}
+		objPathSet(obj[current], rest, value)
+	}
+	return value
+}
+export function objPathGet<T>(obj: any, path: string | string[], defaultValue: T): T
+export function objPathGet<T>(obj: any, path: string | string[], defaultValue?: T): T | undefined {
+	const parts: string[] = typeof path === 'string' ? path.split('.') : path
+	const current = parts[0]
+	if (parts.length === 1) {
+		if (defaultValue && obj[current] === undefined) obj[current] = defaultValue
+		return obj[current]
+	} else {
+		const rest = parts.slice(1)
+		if (!obj[current]) obj[current] = {}
+		return objPathGet(obj[current], rest, defaultValue)
+	}
+}

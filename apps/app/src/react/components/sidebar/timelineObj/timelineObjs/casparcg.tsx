@@ -2,6 +2,9 @@ import React from 'react'
 import { assertNever } from '@shared/lib'
 import {
 	ChannelFormat,
+	Direction,
+	Ease,
+	RegularTimelineTransition,
 	TimelineContentTypeCasparCg,
 	TimelineObjCasparCGAny,
 	TimelineObjCCGHTMLPage,
@@ -11,14 +14,17 @@ import {
 	TimelineObjCCGRecord,
 	TimelineObjCCGRoute,
 	TimelineObjCCGTemplate,
+	Transition,
 } from 'timeline-state-resolver-types'
 import { EditWrapper, OnSave } from './lib'
 import { BooleanInput } from '../../../inputs/BooleanInput'
 import { DurationInput } from '../../../inputs/DurationInput'
+import { FloatInput } from '../../../inputs/FloatInput'
 import { SelectEnum } from '../../../inputs/SelectEnum'
 import { IntInput } from '../../../inputs/IntInput'
 import { TextInput } from '../../../inputs/TextInput'
 import { Link } from '@mui/material'
+import { objPathGet, objPathSet } from '../../../../../lib/util'
 
 export const EditTimelineObjCasparCGAny: React.FC<{ obj: TimelineObjCasparCGAny; onSave: OnSave }> = ({
 	obj,
@@ -27,7 +33,8 @@ export const EditTimelineObjCasparCGAny: React.FC<{ obj: TimelineObjCasparCGAny;
 	let settings: JSX.Element = <></>
 
 	const [showAll, setShowAll] = React.useState(false)
-	// const [showMixer, setShowMixer] = React.useState(false)
+	const [showMixer, setShowMixer] = React.useState(false)
+	const [showTransition, setShowTransition] = React.useState(false)
 
 	const commonSettings: JSX.Element = (
 		<>
@@ -106,14 +113,103 @@ export const EditTimelineObjCasparCGAny: React.FC<{ obj: TimelineObjCasparCGAny;
 			) : null}
 		</>
 	)
+	const getSettingsTransition = (obj: TimelineObjCasparCGAny, path: string, label: string) => {
+		const transition = objPathGet<RegularTimelineTransition>(obj, path, {
+			type: Transition.MIX,
+			easing: Ease.IN_OUT_CUBIC,
+		})
+
+		return (
+			(showTransition || (transition.type ?? Transition.CUT) !== Transition.CUT) && (
+				<>
+					<div className="setting">
+						<SelectEnum
+							label={`${label} type`}
+							fullWidth
+							currentValue={transition.type}
+							options={Transition}
+							onChange={(v) => {
+								transition.type = v
+								onSave(obj)
+							}}
+							allowUndefined={true}
+						/>
+					</div>
+					{(transition.type ?? Transition.CUT) !== Transition.CUT && (
+						<>
+							<div className="setting">
+								<DurationInput
+									label={`${label} duration`}
+									fullWidth
+									currentValue={transition.duration}
+									onChange={(v) => {
+										transition.duration = v
+										onSave(obj)
+									}}
+									allowUndefined={true}
+								/>
+							</div>
+							<div className="setting">
+								<SelectEnum
+									label={`${label} easing`}
+									fullWidth
+									currentValue={transition.easing}
+									options={Ease}
+									onChange={(v) => {
+										transition.easing = v
+										onSave(obj)
+									}}
+									allowUndefined={true}
+								/>
+							</div>
+							{transition.type &&
+								[Transition.PUSH, Transition.WIPE, Transition.SLIDE].includes(transition.type) && (
+									<div className="setting">
+										<SelectEnum
+											label={`${label} direction`}
+											fullWidth
+											currentValue={transition.direction}
+											options={Direction}
+											onChange={(v) => {
+												transition.direction = v
+												onSave(obj)
+											}}
+											allowUndefined={true}
+										/>
+									</div>
+								)}
+						</>
+					)}
+				</>
+			)
+		)
+	}
 
 	const showAllButton = showAll ? (
-		<Link href="#" onClick={() => setShowAll(false)}>
+		<Link className="show-hide" href="#" onClick={() => setShowAll(false)}>
 			Hide more settings
 		</Link>
 	) : (
-		<Link href="#" onClick={() => setShowAll(true)}>
+		<Link className="show-hide" href="#" onClick={() => setShowAll(true)}>
 			Show more settings
+		</Link>
+	)
+	const showMixerButton = showMixer ? (
+		<Link className="show-hide" href="#" onClick={() => setShowMixer(false)}>
+			Hide mixer settings
+		</Link>
+	) : (
+		<Link className="show-hide" href="#" onClick={() => setShowMixer(true)}>
+			Show mixer settings
+		</Link>
+	)
+	const showTransitionButton = showTransition ? (
+		<Link className="show-hide" href="#" onClick={() => setShowTransition(false)}>
+			Hide transition settings
+		</Link>
+	) : (
+		<Link className="show-hide" href="#" onClick={() => setShowTransition(true)}>
+			Show transition settings
 		</Link>
 	)
 
@@ -204,6 +300,86 @@ export const EditTimelineObjCasparCGAny: React.FC<{ obj: TimelineObjCasparCGAny;
 				{getSettingsVideoAudioFilters(obj)}
 
 				{showAllButton}
+
+				{getSettingsTransition(obj, 'content.transitions.inTransition', 'In transition')}
+				{getSettingsTransition(obj, 'content.transitions.outTransition', 'Out transition')}
+				{showTransitionButton}
+				{(showMixer || obj.content.mixer?.brightness !== undefined) && (
+					<>
+						<FloatInput
+							label="Brightness"
+							fullWidth
+							currentValue={obj.content.mixer?.brightness as number | undefined}
+							onChange={(v) => {
+								objPathSet(obj, 'content.mixer.brightness', v)
+								onSave(obj)
+							}}
+							allowUndefined={true}
+							percentage={true}
+							caps={[0, 1]}
+						/>
+					</>
+				)}
+
+				{/*
+				anchor?: {
+					x: number;
+					y: number;
+				} | TransitionObject;
+				blend?: BlendMode | TransitionObject;
+				// brightness?: number | TransitionObject;
+				chroma?: {
+					keyer: Chroma;
+					threshold: number;
+					softness: number;
+					spill: number;
+				} | TransitionObject;
+				clip?: {
+					x: number;
+					y: number;
+					width: number;
+					height: number;
+				} | TransitionObject;
+				contrast?: number | TransitionObject;
+				crop?: {
+					left: number;
+					top: number;
+					right: number;
+					bottom: number;
+				} | TransitionObject;
+				fill?: {
+					x: number;
+					y: number;
+					xScale: number;
+					yScale: number;
+				} | TransitionObject;
+				keyer?: boolean | TransitionObject;
+				levels?: {
+					minInput: number;
+					maxInput: number;
+					gamma: number;
+					minOutput: number;
+					maxOutput: number;
+				} | TransitionObject;
+				mastervolume?: number | TransitionObject;
+				opacity?: number | TransitionObject;
+				perspective?: {
+					topLeftX: number;
+					topLeftY: number;
+					topRightX: number;
+					topRightY: number;
+					bottomRightX: number;
+					bottomRightY: number;
+					bottomLeftX: number;
+					bottomLeftY: number;
+				} | TransitionObject;
+				rotation?: number | TransitionObject;
+				saturation?: number | TransitionObject;
+				straightAlpha?: boolean | TransitionObject;
+				volume?: number | TransitionObject;
+				bundleWithCommands?: number; */}
+
+				{showMixerButton}
 			</>
 		)
 	} else if (obj.content.type === TimelineContentTypeCasparCg.IP) {
