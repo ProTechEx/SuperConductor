@@ -28,13 +28,13 @@ export interface TimelineObjectMove {
 	/** The corresponding layer ID of the layer element that the user's mouse is hovering over. null = not over a valid layer */
 	hoveredLayerId: null | string
 	/** The current client X position of the pointer [pixels] */
-	pointerX?: number
+	// pointerX?: number
 	/** The current client Y position of the pointer [pixels] */
-	pointerY?: number
+	// pointerY?: number
 	/** The origin client X position of the pointer when the move began [pixels] */
-	originX?: number
+	// originX?: number
 	/** The origin client Y position of the pointer when the move began [pixels] */
-	originY?: number
+	// originY?: number
 	/** Whether to make a duplicate of the moved timelineObj or not */
 	duplicate?: boolean
 	/** A unique identifier for each move transaction */

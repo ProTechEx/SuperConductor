@@ -141,6 +141,7 @@ export const PartView: React.FC<{
 			}
 			const orgMaxDuration = orgResolvedTimeline ? getResolvedTimelineTotalDuration(orgResolvedTimeline, true) : 0
 			const msPerPixel = orgMaxDuration / trackWidth
+			console.log('=', msPerPixel, orgMaxDuration, trackWidth)
 			const snapDistanceInMilliseconds = msPerPixel * SNAP_DISTANCE_IN_PIXELS
 			return {
 				orgResolvedTimeline,
@@ -235,10 +236,10 @@ export const PartView: React.FC<{
 			let newObjectsToMoveToNewLayer: string[] | null = null
 
 			const dragDelta = timelineObjMove.dragDelta || 0
+			console.log('dragDelta', dragDelta)
 			const leaderObj = part.timeline.find((obj) => obj.obj.id === timelineObjMove.leaderTimelineObjId)
 			const leaderObjOriginalLayerId = leaderObj?.obj.layer
 			const leaderObjLayerChanged = leaderObjOriginalLayerId !== timelineObjMove.hoveredLayerId
-
 			if (
 				gui.selectedTimelineObjIds.length === 1 &&
 				leaderObj &&
@@ -270,6 +271,7 @@ export const PartView: React.FC<{
 						handleError('Unable to move to that layer (incompatible layer type)')
 					}
 				}
+				console.log('a')
 
 				try {
 					const o = applyMovementToTimeline(

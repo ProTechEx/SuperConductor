@@ -77,6 +77,8 @@ export function applyMovementToTimeline(
 	const orgLeaderInstance = orgLeaderObj.resolved.instances[0] as TimelineObjectInstance | undefined
 	if (!orgLeaderInstance) throw new Error(`No instance of leader obj "${leaderTimelineObjId}"`)
 
+	console.log('orgLeaderInstance', orgLeaderInstance)
+
 	// Moving a timelineObj to another layer:
 	const modifiedLeaderObj = modifiedTimeline.find((o) => o.obj.id === leaderTimelineObjId)
 	if (modifiedLeaderObj && leaderTimelineObjNewLayer && modifiedLeaderObj.obj.layer !== leaderTimelineObjNewLayer) {
@@ -185,6 +187,8 @@ export function applyMovementToTimeline(
 		orgResolvedTimeline,
 		dragSnap
 	)
+	console.log('moveType', moveType)
+	console.log('o', o)
 	const draggedTimeline = o.all
 
 	changedObjects = { ...changedObjects, ...o.changed }
@@ -225,6 +229,7 @@ export function applyMovementToTimeline(
 			orgResolvedTimeline,
 			dragSnap
 		)
+
 		const draggedTimeline2 = o.all
 		changedObjects = { ...changedObjects, ...o.changed }
 		// Resolve it again...
@@ -234,6 +239,7 @@ export function applyMovementToTimeline(
 			{ time: 0, cache: cache }
 		)
 	}
+	console.log(JSON.stringify(modifiedTimeline, null, 2))
 	return {
 		modifiedTimeline,
 		resolvedTimeline,

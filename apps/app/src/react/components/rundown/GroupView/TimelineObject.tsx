@@ -3,7 +3,7 @@ import { useMovable } from '../../../../lib/useMovable'
 import { TimelineObj } from '../../../../models/rundown/TimelineObj'
 import { HotkeyContext } from '../../../contexts/Hotkey'
 import classNames from 'classnames'
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ResolvedTimelineObject, TimelineObjectInstance } from 'superfly-timeline'
 import { TSRTimelineObj } from 'timeline-state-resolver-types'
 import { observer } from 'mobx-react-lite'
@@ -40,18 +40,99 @@ export const TimelineObject: React.FC<{
 	const timelineObjMove = gui.timelineObjMove
 
 	const ref = useRef<HTMLDivElement>(null)
-	const [isMoved, deltaX, _deltaY, pointerX, pointerY, originX, originY] = useMovable(ref.current, {
-		dragging: timelineObjMove.leaderTimelineObjId === timelineObj.obj.id && Boolean(timelineObjMove.moveType),
-		pointerX: timelineObjMove.pointerX ?? 0,
-		pointerY: timelineObjMove.pointerY ?? 0,
-		originX: timelineObjMove.originX ?? 0,
-		originY: timelineObjMove.originY ?? 0,
-	})
+
 	const hotkeyContext = useContext(HotkeyContext)
-	const [handledMoveStart, setHandledMoveStart] = useState(false)
+	// const [handledMoveStart, setHandledMoveStart] = useState(false)
 	const [allowMultiSelection, setAllowMultiSelection] = useState(false)
 	const [allowDuplicate, setAllowDuplicate] = useState(false)
+
 	const [moveType, setMoveType] = useState<TimelineObjectMove['moveType']>('whole')
+
+	// const [isMoved, deltaX, _deltaY, pointerX, pointerY, originX, originY] = useMovable(ref.current, {
+	// 	dragging: timelineObjMove.leaderTimelineObjId === timelineObj.obj.id && Boolean(timelineObjMove.moveType),
+	// 	pointerX: timelineObjMove.pointerX ?? 0,
+	// 	pointerY: timelineObjMove.pointerY ?? 0,
+	// 	originX: timelineObjMove.originX ?? 0,
+	// 	originY: timelineObjMove.originY ?? 0,
+	// })
+
+	// console.log('msPerPixel', msPerPixel)
+
+	const dragData = useRef({
+		msPerPixel,
+		partId,
+		moveType,
+	})
+	useEffect(() => {
+		dragData.current = { msPerPixel }
+	}, [msPerPixel])
+	const onDragStart = useCallback(() => {
+		// A move has begun.
+		// setHandledMoveStart(true)
+		console.log('drag start')
+		const dd = dragData.current
+		gui.updateTimelineObjMove({
+			wasMoved: null,
+			moveId: shortID(),
+			partId: dd.partId,
+			moveType: dd.moveType,
+			leaderTimelineObjId: timelineObj.obj.id,
+			//
+			// dragDelta: 0,
+			// duplicate: allowDuplicate,
+		})
+	}, [msPerPixel])
+	const onDragMove = useCallback(
+		(delta, position) => {
+			// console.log(delta, dragData.current.msPerPixel)
+			const update: Partial<TimelineObjectMove> = {
+				dragDelta: delta.x * dragData.current.msPerPixel,
+				// pointerX,
+				// pointerY,
+				// originX,
+				// originY,
+				duplicate: allowDuplicate,
+			}
+			const hoveredEl = document.elementFromPoint(position.clientX, position.clientY)
+			const hoveredPartEl = hoveredEl?.closest('.part')
+			if (hoveredPartEl) {
+				const hoveredPartId = hoveredPartEl.getAttribute('data-part-id')
+				if (hoveredPartId === partId) {
+					const hoveredLayerEl = hoveredEl?.closest('.layer')
+					if (hoveredLayerEl) {
+						const hoveredLayerId = hoveredLayerEl.getAttribute('data-layer-id')
+						update.hoveredLayerId = hoveredLayerId
+					}
+				}
+			}
+			gui.updateTimelineObjMove(update)
+		},
+		[msPerPixel]
+	)
+	const onDragEnd = useCallback((delta, position) => {
+		// A move has completed.
+
+		// setHandledMoveStart(false)
+		setMoveType(null)
+		gui.updateTimelineObjMove({
+			moveType: null,
+			wasMoved: timelineObjMove.moveType,
+		})
+
+		// const update: Partial<TimelineObjectMove> = {
+		// 	wasMoved: null,
+		// 	partId,
+		// 	leaderTimelineObjId: undefined,
+		// 	moveType,
+
+		// }
+	}, [])
+
+	const move = useMovable(ref, {
+		onDragStart,
+		onDragMove,
+		onDragEnd,
+	})
 
 	const obj: TSRTimelineObj = timelineObj.obj
 	let instance = resolved.instances[0] as TimelineObjectInstance | undefined
@@ -106,75 +187,75 @@ export const TimelineObject: React.FC<{
 	}, [hotkeyContext])
 
 	// This useEffect hook and the one immediately following it are order-sensitive.
-	useEffect(() => {
-		if (!isMoved || locked) {
-			return
-		}
+	// useEffect(() => {
+	// 	if (!isMoved || locked) {
+	// 		return
+	// 	}
 
-		const update: Partial<TimelineObjectMove> = {
-			wasMoved: null,
-			partId,
-			leaderTimelineObjId: timelineObj.obj.id,
-			moveType,
-			dragDelta: deltaX * msPerPixel,
-			pointerX,
-			pointerY,
-			originX,
-			originY,
-			duplicate: allowDuplicate,
-		}
+	// 	const update: Partial<TimelineObjectMove> = {
+	// 		wasMoved: null,
+	// 		partId,
+	// 		leaderTimelineObjId: timelineObj.obj.id,
+	// 		moveType,
+	// 		dragDelta: deltaX * msPerPixel,
+	// 		pointerX,
+	// 		pointerY,
+	// 		originX,
+	// 		originY,
+	// 		duplicate: allowDuplicate,
+	// 	}
 
-		const hoveredEl = document.elementFromPoint(pointerX, pointerY)
-		const hoveredPartEl = hoveredEl?.closest('.part')
-		if (hoveredPartEl) {
-			const hoveredPartId = hoveredPartEl.getAttribute('data-part-id')
-			if (hoveredPartId === partId) {
-				const hoveredLayerEl = hoveredEl?.closest('.layer')
-				if (hoveredLayerEl) {
-					const hoveredLayerId = hoveredLayerEl.getAttribute('data-layer-id')
-					update.hoveredLayerId = hoveredLayerId
-				}
-			}
-		}
+	// 	const hoveredEl = document.elementFromPoint(pointerX, pointerY)
+	// 	const hoveredPartEl = hoveredEl?.closest('.part')
+	// 	if (hoveredPartEl) {
+	// 		const hoveredPartId = hoveredPartEl.getAttribute('data-part-id')
+	// 		if (hoveredPartId === partId) {
+	// 			const hoveredLayerEl = hoveredEl?.closest('.layer')
+	// 			if (hoveredLayerEl) {
+	// 				const hoveredLayerId = hoveredLayerEl.getAttribute('data-layer-id')
+	// 				update.hoveredLayerId = hoveredLayerId
+	// 			}
+	// 		}
+	// 	}
 
-		gui.updateTimelineObjMove(update)
-	}, [
-		isMoved,
-		deltaX,
-		msPerPixel,
-		timelineObj.obj.id,
-		partId,
-		pointerX,
-		pointerY,
-		originX,
-		originY,
-		allowDuplicate,
-		moveType,
-		locked,
-		gui,
-	])
-	useEffect(() => {
-		if (locked) {
-			return
-		}
+	// 	gui.updateTimelineObjMove(update)
+	// }, [
+	// 	isMoved,
+	// 	deltaX,
+	// 	msPerPixel,
+	// 	timelineObj.obj.id,
+	// 	partId,
+	// 	pointerX,
+	// 	pointerY,
+	// 	originX,
+	// 	originY,
+	// 	allowDuplicate,
+	// 	moveType,
+	// 	locked,
+	// 	gui,
+	// ])
+	// useEffect(() => {
+	// 	if (locked) {
+	// 		return
+	// 	}
 
-		if (isMoved && !handledMoveStart) {
-			// A move has begun.
+	// 	if (isMoved && !handledMoveStart) {
+	// 		// A move has begun.
 
-			setHandledMoveStart(true)
-			gui.updateTimelineObjMove({
-				moveId: shortID(),
-			})
-		} else if (!isMoved && handledMoveStart) {
-			// A move has completed.
+	// 		setHandledMoveStart(true)
+	// 		gui.updateTimelineObjMove({
+	// 			moveId: shortID(),
+	// 		})
+	// 	} else if (!isMoved && handledMoveStart) {
+	// 		// A move has completed.
 
-			setHandledMoveStart(false)
-			gui.updateTimelineObjMove({
-				moveType: null,
-				wasMoved: timelineObjMove.moveType,
-			})
-		}
-	}, [gui, handledMoveStart, isMoved, locked, timelineObjMove.moveType])
+	// 		setHandledMoveStart(false)
+	// 		gui.updateTimelineObjMove({
+	// 			moveType: null,
+	// 			wasMoved: timelineObjMove.moveType,
+	// 		})
+	// 	}
+	// }, [gui, handledMoveStart, isMoved, locked, timelineObjMove.moveType])
 
 	const updateSelection = () => {
 		if (
@@ -248,16 +329,19 @@ export const TimelineObject: React.FC<{
 					if (ref.current) {
 						const box = ref.current.getBoundingClientRect()
 						if (box.width <= HANDLE_WIDTH * 2) {
-							return setMoveType('whole')
+							move.onStartMoving()
+							setMoveType('whole')
+							return
 						}
 					}
-
+					move.onStartMoving()
 					setMoveType('start')
 				}}
 			/>
 			<div
 				className="body"
 				onPointerDown={() => {
+					move.onStartMoving()
 					setMoveType('whole')
 				}}
 			>
@@ -275,10 +359,12 @@ export const TimelineObject: React.FC<{
 					if (ref.current) {
 						const box = ref.current.getBoundingClientRect()
 						if (box.width <= HANDLE_WIDTH * 2) {
-							return setMoveType('whole')
+							move.onStartMoving()
+							setMoveType('whole')
+							return
 						}
 					}
-
+					move.onStartMoving()
 					setMoveType('duration')
 				}}
 			/>

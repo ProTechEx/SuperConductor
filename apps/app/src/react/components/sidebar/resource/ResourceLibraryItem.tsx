@@ -35,7 +35,7 @@ export const ResourceLibraryItem = function ResourceLibraryItem({ resource, sele
 		if (resource.resourceType === ResourceType.CASPARCG_MEDIA) {
 			return (
 				<>
-					<ResourceLibraryItemThumbnail resource={resource} />
+					{/* <ResourceLibraryItemThumbnail resource={resource} /> */}
 					<div className="resource__details">
 						<div className="resource__name" title={resource.displayName}>
 							{resource.displayName}
